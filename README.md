@@ -6,7 +6,7 @@
 
 原理上来说，是在构建过程中修改 assets 的输出路径，直接输出到指定目录，而不是在构建完成后再移动。
 
-**如果使用 create-react-app，请务必看一下后面提到的 @vue/cli 和 create-react-appp 的区别**。
+**如果使用 create-react-app，请务必看一下后面提到的 @vue/cli 和 create-react-app 的区别**。
 
 ## 使用
 
@@ -33,6 +33,23 @@ new MoveAssetsPlugin({
   ]
 })
 ```
+
+注意，要把 `from` 更具体的规则写在前面。举个栗子：
+
+```js
+const patterns = [
+  {
+    from: 'dist/js/libs',
+    to: '../be/public/libs'
+  },
+  {
+    from: 'dist/js',
+    to: '../be/public/js'
+  }
+]
+```
+
+其中 `dist/js/libs` 是更具体的路径，需要写在 `dist/js` 前面。
 
 ## 为什么要用
 
