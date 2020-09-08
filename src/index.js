@@ -20,11 +20,13 @@ class MoveAssetsPlugin {
     compiler.hooks.emit.tap(plugin, (compilation) => {
       if (this.patterns.length === 0) return;
 
+      const { context } = compiler;
+      const { assets } = compilation;
+
       this.patterns.forEach(({ to }) => {
-        fs.removeSync(to);
+        fs.removeSync(path.join(context, to));
       });
 
-      const { assets } = compilation;
       Object.keys(assets).forEach((name) => {
         let newName = normalizePath(path.join(this.outputDir, name));
         for (const pattern of this.patterns) {
