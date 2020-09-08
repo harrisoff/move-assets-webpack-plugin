@@ -7,9 +7,10 @@ function normalizePath(p) {
 
 class MoveAssetsPlugin {
   constructor(options = {}) {
-    const { outputDir, patterns } = options;
+    const { outputDir, patterns, clean } = options;
     this.outputDir = outputDir || 'dist';
     this.patterns = patterns || [];
+    this.clean = clean === undefined ? true : clean;
   }
 
   apply(compiler) {
@@ -20,13 +21,14 @@ class MoveAssetsPlugin {
     compiler.hooks.emit.tap(plugin, (compilation) => {
       if (this.patterns.length === 0) return;
 
-      const { context } = compiler;
+      if (this.clean) {
+        const { context } = compiler;
+        this.patterns.forEach(({ to }) => {
+          fs.removeSync(path.join(context, to));
+        });
+      }
+
       const { assets } = compilation;
-
-      this.patterns.forEach(({ to }) => {
-        fs.removeSync(path.join(context, to));
-      });
-
       Object.keys(assets).forEach((name) => {
         let newName = normalizePath(path.join(this.outputDir, name));
         for (const pattern of this.patterns) {
