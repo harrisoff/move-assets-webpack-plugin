@@ -25,3 +25,5 @@ jobs:
       run: npm i
     - name: test
       run: npm run test
+    - name: codecov
+      run: npx codecov --token=${{ secrets.CODECOV_TOKEN }}

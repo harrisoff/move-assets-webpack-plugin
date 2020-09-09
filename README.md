@@ -2,6 +2,7 @@
 
 [![windows build status](https://github.com/harrisoff/move-assets-webpack-plugin/workflows/windows%20build/badge.svg)](https://github.com/harrisoff/move-assets-webpack-plugin/actions?query=workflow%3A%22windows+build%22)
 [![linux build status](https://github.com/harrisoff/move-assets-webpack-plugin/workflows/linux%20build/badge.svg)](https://github.com/harrisoff/move-assets-webpack-plugin/actions?query=workflow%3A%22linux+build%22)
+[![codecov coverage](https://img.shields.io/codecov/c/github/harrisoff/move-assets-webpack-plugin/master.svg)](https://codecov.io/gh/harrisoff/move-assets-webpack-plugin/)
 
 [![npm download](https://img.shields.io/npm/dt/move-assets-webpack-plugin.svg)](https://www.npmjs.com/package/move-assets-webpack-plugin)
 [![npm version](https://badge.fury.io/js/move-assets-webpack-plugin.svg)](https://www.npmjs.com/package/move-assets-webpack-plugin)

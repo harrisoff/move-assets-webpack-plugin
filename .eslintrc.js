@@ -12,5 +12,6 @@ module.exports = {
   },
   rules: {
     'no-restricted-syntax': 'off',
+    'linebreak-style': 'off',
   },
 };

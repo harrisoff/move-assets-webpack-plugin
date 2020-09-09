@@ -177,6 +177,8 @@ afterAll(() => {
   process.chdir(cwd);
 });
 
+// TODO: if patterns or outputDir is not set
+
 test('do not delete old files', async () => {
   createOldFiles();
   createNewFiles();
