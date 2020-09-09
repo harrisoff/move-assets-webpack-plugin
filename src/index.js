@@ -2,7 +2,11 @@ const path = require('path');
 const fs = require('fs-extra');
 
 function normalizePath(p) {
-  return path.normalize(p).replace(/\\/g, '/');
+  return path.normalize(p);
+}
+
+function escapeBackSlash(p) {
+  return p.replace(/\\/g, '/');
 }
 
 class MoveAssetsPlugin {
@@ -11,6 +15,12 @@ class MoveAssetsPlugin {
     this.outputDir = outputDir || 'dist';
     this.patterns = patterns || [];
     this.clean = clean === undefined ? true : clean;
+
+    this.outputDir = escapeBackSlash(this.outputDir);
+    this.patterns = this.patterns.map(({ from, to }) => ({
+      from: normalizePath(escapeBackSlash(from)),
+      to: normalizePath(escapeBackSlash(to)),
+    }));
   }
 
   apply(compiler) {
@@ -31,12 +41,10 @@ class MoveAssetsPlugin {
       const { assets } = compilation;
       Object.keys(assets).forEach((name) => {
         let newName = normalizePath(path.join(this.outputDir, name));
-        for (const pattern of this.patterns) {
-          const from = normalizePath(pattern.from);
-          if (newName.match(from)) {
-            const to = normalizePath(pattern.to);
+        for (const { from, to } of this.patterns) {
+          if (newName.indexOf(from) > -1) {
             newName = newName.replace(from, to);
-            newName = path.join('../', newName);
+            newName = path.join('..', newName);
             assets[newName] = assets[name];
             delete assets[name];
             break;
