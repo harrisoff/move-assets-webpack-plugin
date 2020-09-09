@@ -1,14 +1,49 @@
 # move-assets-webpack-plugin
 
-## 作用
+[![windows build status](https://github.com/harrisoff/move-assets-webpack-plugin/workflows/windows%20build/badge.svg)](https://github.com/harrisoff/move-assets-webpack-plugin/actions?query=workflow%3A%22windows+build%22)
+[![linux build status](https://github.com/harrisoff/move-assets-webpack-plugin/workflows/linux%20build/badge.svg)](https://github.com/harrisoff/move-assets-webpack-plugin/actions?query=workflow%3A%22linux+build%22)
 
-效果上来说，是在构建结束后，把构建产物移动到指定目录。
+[![npm download](https://img.shields.io/npm/dt/move-assets-webpack-plugin.svg)](https://www.npmjs.com/package/move-assets-webpack-plugin)
+[![npm version](https://badge.fury.io/js/move-assets-webpack-plugin.svg)](https://www.npmjs.com/package/move-assets-webpack-plugin)
+![license](https://img.shields.io/npm/l/move-assets-webpack-plugin.svg?sanitize=true)
 
-原理上来说，是在构建过程中修改 assets 的输出路径，直接输出到指定目录，而不是在构建完成后再移动。
+[![npm](https://nodei.co/npm/move-assets-webpack-plugin.png?compact=true)](https://www.npmjs.com/package/move-assets-webpack-plugin)
 
-**如果使用 create-react-app，请务必看一下后面提到的 @vue/cli 和 create-react-app 的区别**。
+- [Documentation](https://github.com/harrisoff/move-assets-webpack-plugin/blob/master/README.md)
+- [文档](https://github.com/harrisoff/move-assets-webpack-plugin/blob/master/README.zh-CN.md)
 
-## 使用
+## Feature
+
+Move the output files to other directories after the build.
+
+Technically speaking, this plugin modifies the asset's path in the compiling process, so that the files are written to the target directory, rather than moved after the build.
+
+If the output looks like this:
+
+```
++ dist/
+  + js/
+  + css/
+  + index.html
+```
+
+However you have to move the files separately into the backend directory, like this:
+
+```
++ WebRoot/
+  + public/
+    + js/
+    + css/
+  + WEB-INF/
+    + view/
+      + index.html
+```
+
+Now you may need this plugin.
+
+**⚠️ If you are using create-react-app, please make sure to check the differences between @vue/cli and create-react-app mentioned at the end.**
+
+## Getting Started
 
 ```bash
 npm install move-assets-webpack-plugin -D
@@ -18,9 +53,7 @@ npm install move-assets-webpack-plugin -D
 const MoveAssetsPlugin = require("move-assets-webpack-plugin")
 
 new MoveAssetsPlugin({
-  // 原始输出目录，默认为 dist
   outputDir: 'dist',
-  // 匹配规则，暂不支持通配符，如 js/*.js
   patterns: [
     {
       from: 'dist/static',
@@ -34,7 +67,51 @@ new MoveAssetsPlugin({
 })
 ```
 
-注意，要把 `from` 更具体的规则写在前面。举个栗子：
+## Options
+
+### outputDir
+
+Type: String
+
+Default: "dist"
+
+Required: false
+
+The original output directory.
+
+### patterns
+
+Type: Array
+
+Default: []
+
+Required: false
+
+Match Rules. Wildcard characters like `js/*.js` are not supported yet. The plugin will not work if `patterns` is an empty array.
+
+### clean
+
+Type: Boolean
+
+Default: true
+
+Required: false
+
+Whether delete old files. Old files are files the `to` field given in the option `patterns` refer to.
+
+## Attention
+
+### Plugin Order
+
+This plugin must be placed after plugins that may add files to `compilation.assets`, or when this plugin is called, files not added are unable to be processed.
+
+**In one word, always put this plugin at the end of `plugins` option.**
+
+For example, [html-webpack-plugin](https://github.com/jantimon/html-webpack-plugin) adds a html file to `compilation.assets`. If MoveAssetsPlugin is called before HtmlWebpackPlugin, the html file is not yet added to `compilation.assets`, so the rules operating html files will not work.
+
+### Patterns
+
+Rules that are more specific should be placed ahead.
 
 ```js
 const patterns = [
@@ -49,63 +126,38 @@ const patterns = [
 ]
 ```
 
-其中 `dist/js/libs` 是更具体的路径，需要写在 `dist/js` 前面。
+In this case `dist/js/libs` is more specific than `dist/js`, so it should be in front of `dist/js`.
 
-## 为什么要用
+## Why Using This Plugin
 
-为什么不编写专门的脚本，或者直接修改 `webpack.config.js`/`vue.config.js` 配置文件呢？
+Why not write a script, or just edit `webpack.config`/`vue.config.js`?
 
-编写额外的脚本，一个比较明显的缺点是脱离了 webpack 的构建流程，无法访问到 webpack 中定义的环境变量。
+The shorthand of writing a script is that the script is out of the webpack build process, making the webpack environment variables inaccessible.
 
-对于使用 `webpack.config.js` 的场景，确实可以直接修改配置，不过如果涉及到的文件路径比较多，可能会导致配置复杂，可读性变差，插件能够在原始配置不变的条件下提供一个修改的接口。
+When using `webpack.config.js`, it does work by editing the config file. However, the config will become complicated if there are too many paths to edit. The plugin offers an interface so that you don't have to change the original config.
 
-对于使用脚手架工具的场景，以 `@vue/cli` 为例，`vue.config.js` 提供的相关配置较少，基本只能移动整个 `dist`，无法单独操作其中的文件。
+For cli users, such as `@vue/cli`, it does not offer many relative options. Basically you can only move the entire `dist`, and it’s hard to move files in it.
 
-`@vue/cli` 打包出来的 `dist` 通常是这样的：
+## Developing
 
-```
-+ dist/
-  + js/
-  + css/
-  + index.html
-```
+### Why Changing While Compiling
 
-如果后端的目录结构不支持直接把 `dist` 整个复制，比如像这样：
+Why modifying the asset's path during compiling progress, rather than moving till the whole build process is done?
 
-```
-+ WebRoot/
-  + public/
-    + js/
-    + css/
-  + WEB-INF/
-    + view/
-      + index.html
-```
+It seems an easy and efficient way to move the outputs using modules like `fs` in a `hook` after all files are written to the disk.
 
-> 对，说的就是我们公司
+Here's the problem, `@vue/cli` and `create-react-app` will calculate the gzipped sizes of files after the build, and this process is after the webpack build process and will use the `assets` data returned by webpack. An error will be thrown if files are moved to other directories.
 
-这时，可能就需要这个插件了。
+### The Differences Between @vue/cli And create-react-app
 
-## 开发相关
+The conclusion is: **When using `create-react-app`, the plugin is unable to move files copied from `public` to `build`.**
 
-### 为什么要修改构建流程
+This is because those two take different measures to process the `public` files.
 
-为什么要在构建过程中修改输出目录，而不是等构建完成之后再移动？
+`@vue/cli` uses [copy-webpack-plugin](https://github.com/webpack-contrib/copy-webpack-plugin) to handle files in `public` directory, which adds files to `compilation.assets`, and with the ability of webpack the files are written to new directories. This is not a real copy-paste process.
 
-在文件写到硬盘之后的某个 `hook` 里使用 `fs` 等模块移动文件是一个看上去简单可行的做法。
+In other words, all files in the `dist` will exist in `compilation.assets`, so this plugin is able to operate all of them.
 
-但是问题在于，`@vue/cli` 和 `create-react-app` 等脚手架工具会在构建完成后输出一份经过 gzip 压缩后的文件大小的数据，这部分逻辑是在 webpack 构建流程之后的，并且会使用 webpack 返回的 `assets` 数据。如果在这之前把文件移动到了其他目录，就会报错了。
+`create-react-app` does a real copy-paste to `public`. There is a function used to copy files in the build script, and the webpack build process is after the copy process.
 
-### @vue/cli 和 create-react-app 的区别
-
-首先说一下结论：**使用 `create-react-app` 时，本插件对从 `public` 复制到 `build` 的文件无效。**
-
-因为这两者对 `public` 中文件的处理是不同的。
-
-`@vue/cli` 使用 [copy-webpack-plugin](https://github.com/webpack-contrib/copy-webpack-plugin) 处理 `public` 中的文件，其原理是把文件添加到 `compilation.assets`，借用 webpack 的能力把文件输出到 `dist`，并不是真的从 `public` 复制到 `dist`。
-
-换句话说，使用 `@vue/cli` 时，所有输出到 `dist` 的文件都会存在于 `compilation.assets` 中，因此本插件可以操作 `dist` 目录中的所有文件。
-
-而 `create-react-app` 对 `public` 的处理就是真的复制粘贴了，其构建脚本中有专门用于复制文件的函数，并且先复制 `public`，然后再启动 webpack 构建流程。
-
-也就是说，使用 `create-react-app` 时，public 中的文件是不会被添加到 `compilation.assets` 的，那么对于这部分文件，本插件就无能为力了。
+Now that files in `public` will not be added to `compilation.assets`, those files are unable to be processed.
