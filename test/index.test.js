@@ -168,6 +168,8 @@ const cwd = process.cwd();
 beforeEach(() => {
   process.chdir(sandbox.dir);
   sandbox.cleanSync();
+  createOldFiles();
+  createNewFiles();
 });
 afterEach(() => {
   process.chdir(cwd);
@@ -177,44 +179,141 @@ afterAll(() => {
   process.chdir(cwd);
 });
 
-// TODO: if patterns or outputDir is not set
+const baseOptions = {
+  // vue.config.js
+  entry: {
+    app: [
+      './src/index.js',
+    ],
+  },
+  context: feRootPath,
+  output: {
+    path: feDistPath,
+    filename: 'js/[name].js',
+    publicPath: '/',
+    chunkFilename: 'js/[name].js',
+  },
+  plugins: [],
+};
+const basePlugins = [
+  new HtmlWebpackPlugin({
+    template: feViewPath,
+  }),
+  new CopyPlugin({
+    patterns: [
+      {
+        from: fePublicPath,
+        to: feDistPath,
+        globOptions: {
+          ignore: [
+            'index.html',
+          ],
+        },
+      },
+    ],
+  }),
+]
 
-test('do not delete old files', async () => {
-  createOldFiles();
-  createNewFiles();
-
+test('outputDir is not set', async () => {
   const options = {
-    // vue.config.js
-    entry: {
-      app: [
-        './src/index.js',
-      ],
-    },
-    context: feRootPath,
-    output: {
-      path: feDistPath,
-      filename: 'js/[name].js',
-      publicPath: '/',
-      chunkFilename: 'js/[name].js',
-    },
-
+    ...baseOptions,
     plugins: [
-      new HtmlWebpackPlugin({
-        template: feViewPath,
-      }),
-      new CopyPlugin({
+      ...basePlugins,
+      new MoveAssetsPlugin({
         patterns: [
           {
-            from: fePublicPath,
-            to: feDistPath,
-            globOptions: {
-              ignore: [
-                'index.html',
-              ],
-            },
+            from: 'dist/index.html',
+            to: '../be/view/index.html',
+          },
+          {
+            from: 'dist/js/libs',
+            to: '../be/public/libs',
+          },
+          {
+            from: 'dist/js',
+            to: '../be/public/js',
           },
         ],
       }),
+    ],
+  };
+  const stats = await webpack(options).run();
+
+  expect(Object.keys(stats.compilation.assets).map(normalizePath).sort())
+    .toEqual([
+      '../../be/public/js/1.js',
+      '../../be/public/js/app.js',
+      '../../be/view/index.html',
+      '../../be/public/libs/jq.js',
+      'favicon.ico',
+    ].map(normalizePath).sort());
+
+  const fileList = await sandbox.getFileList();
+  expect(fileList.map(normalizePath).sort()).toEqual([
+    // be
+    'be/view/index.html',
+    'be/view/log.html',
+    'be/public/css/app.css',
+    'be/public/js/1.js',
+    'be/public/js/app.js',
+    'be/public/libs/jq.js',
+    // fe
+    'fe/src/1.js',
+    'fe/src/index.js',
+    'fe/public/index.html',
+    'fe/public/js/libs/jq.js',
+    'fe/public/favicon.ico',
+    'fe/dist/favicon.ico',
+  ].map(normalizePath).sort());
+})
+
+test('no options', async () => {
+  const options = {
+    ...baseOptions,
+    plugins: [
+      ...basePlugins,
+      new MoveAssetsPlugin(),
+    ],
+  };
+  const stats = await webpack(options).run();
+
+  expect(Object.keys(stats.compilation.assets).map(normalizePath).sort())
+    .toEqual([
+      'js/1.js',
+      'js/app.js',
+      'index.html',
+      'js/libs/jq.js',
+      'favicon.ico',
+    ].map(normalizePath).sort());
+
+  const fileList = await sandbox.getFileList();
+  expect(fileList.map(normalizePath).sort()).toEqual([
+    // be
+    'be/view/index.html',
+    'be/view/log.html',
+    'be/public/css/app.css',
+    'be/public/js/1-old.js',
+    'be/public/js/app-old.js',
+    'be/public/libs/jq-old.js',
+    // fe
+    'fe/src/1.js',
+    'fe/src/index.js',
+    'fe/public/index.html',
+    'fe/public/js/libs/jq.js',
+    'fe/public/favicon.ico',
+    "fe/dist/index.html",
+    "fe/dist/js/1.js",
+    "fe/dist/js/app.js",
+    "fe/dist/js/libs/jq.js",
+    'fe/dist/favicon.ico',
+  ].map(normalizePath).sort());
+})
+
+test('do not delete old files', async () => {
+  const options = {
+    ...baseOptions,
+    plugins: [
+      ...basePlugins,
       new MoveAssetsPlugin({
         outputDir: 'dist',
         clean: false,
@@ -270,127 +369,11 @@ test('do not delete old files', async () => {
     ].map(normalizePath).sort());
 });
 
-test('delete old files', async () => {
-  createOldFiles();
-  createNewFiles();
-
-  const options = {
-    // vue.config.js
-    entry: {
-      app: [
-        './src/index.js',
-      ],
-    },
-    context: feRootPath,
-    output: {
-      path: feDistPath,
-      filename: 'js/[name].js',
-      publicPath: '/',
-      chunkFilename: 'js/[name].js',
-    },
-
-    plugins: [
-      new HtmlWebpackPlugin({
-        template: feViewPath,
-      }),
-      new CopyPlugin({
-        patterns: [
-          {
-            from: fePublicPath,
-            to: feDistPath,
-            globOptions: {
-              ignore: [
-                'index.html',
-              ],
-            },
-          },
-        ],
-      }),
-      new MoveAssetsPlugin({
-        outputDir: 'dist',
-        patterns: [
-          {
-            from: 'dist/index.html',
-            to: '../be/view/index.html',
-          },
-          {
-            from: 'dist/js/libs',
-            to: '../be/public/libs',
-          },
-          {
-            from: 'dist/js',
-            to: '../be/public/js',
-          },
-        ],
-      }),
-    ],
-  };
-  const stats = await webpack(options).run();
-
-  expect(Object.keys(stats.compilation.assets).map(normalizePath).sort())
-    .toEqual([
-      '../../be/public/js/1.js',
-      '../../be/public/js/app.js',
-      '../../be/view/index.html',
-      '../../be/public/libs/jq.js',
-      'favicon.ico',
-    ].map(normalizePath).sort());
-
-  const fileList = await sandbox.getFileList();
-  expect(fileList.map(normalizePath).sort()).toEqual([
-    // be
-    'be/view/index.html',
-    'be/view/log.html',
-    'be/public/css/app.css',
-    'be/public/js/1.js',
-    'be/public/js/app.js',
-    'be/public/libs/jq.js',
-    // fe
-    'fe/src/1.js',
-    'fe/src/index.js',
-    'fe/public/index.html',
-    'fe/public/js/libs/jq.js',
-    'fe/public/favicon.ico',
-    'fe/dist/favicon.ico',
-  ].map(normalizePath).sort());
-});
-
 test('use backslash', async () => {
-  createOldFiles();
-  createNewFiles();
-
   const options = {
-    // vue.config.js
-    entry: {
-      app: [
-        './src/index.js',
-      ],
-    },
-    context: feRootPath,
-    output: {
-      path: feDistPath,
-      filename: 'js/[name].js',
-      publicPath: '/',
-      chunkFilename: 'js/[name].js',
-    },
-
+    ...baseOptions,
     plugins: [
-      new HtmlWebpackPlugin({
-        template: feViewPath,
-      }),
-      new CopyPlugin({
-        patterns: [
-          {
-            from: fePublicPath,
-            to: feDistPath,
-            globOptions: {
-              ignore: [
-                'index.html',
-              ],
-            },
-          },
-        ],
-      }),
+      ...basePlugins,
       new MoveAssetsPlugin({
         outputDir: 'dist',
         patterns: [
@@ -411,6 +394,7 @@ test('use backslash', async () => {
     ],
   };
   const stats = await webpack(options).run();
+
   expect(Object.keys(stats.compilation.assets).map(normalizePath).sort())
     .toEqual([
       '../../be/public/js/1.js',
