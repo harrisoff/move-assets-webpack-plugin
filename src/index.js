@@ -11,12 +11,11 @@ function escapeBackSlash(p) {
 
 class MoveAssetsPlugin {
   constructor(options = {}) {
-    const { outputDir, patterns, clean } = options;
-    this.outputDir = outputDir || 'dist';
+    // TODO: validation
+    const { patterns, clean } = options;
     this.patterns = patterns || [];
     this.clean = clean === undefined ? true : clean;
 
-    this.outputDir = escapeBackSlash(this.outputDir);
     this.patterns = this.patterns.map(({ from, to }) => ({
       from: normalizePath(escapeBackSlash(from)),
       to: normalizePath(escapeBackSlash(to)),
@@ -31,20 +30,28 @@ class MoveAssetsPlugin {
     compiler.hooks.emit.tap(plugin, (compilation) => {
       if (this.patterns.length === 0) return;
 
+      const { outputPath } = compiler;
+      const webpackContext = compiler.context;
+      const outputDirWithCwd = path.relative(webpackContext, outputPath);
+      const revertPath = path.relative(outputPath, webpackContext);
+
       if (this.clean) {
-        const { context } = compiler;
         this.patterns.forEach(({ to }) => {
-          fs.removeSync(path.join(context, to));
+          fs.removeSync(path.join(webpackContext, to));
         });
       }
 
       const { assets } = compilation;
       Object.keys(assets).forEach((name) => {
-        let newName = normalizePath(path.join(this.outputDir, name));
+        // patterns start with `outputDir` yet `name` is relative to it
+        // so `outputDir` should be added to `from` as a prefix
+        let newName = normalizePath(path.join(outputDirWithCwd, name));
         for (const { from, to } of this.patterns) {
           if (newName.indexOf(from) > -1) {
             newName = newName.replace(from, to);
-            newName = path.join('..', newName);
+            // revert the prefix
+            newName = path.join(revertPath, newName);
+
             assets[newName] = assets[name];
             delete assets[name];
             break;

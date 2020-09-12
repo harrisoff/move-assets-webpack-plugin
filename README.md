@@ -54,7 +54,6 @@ npm install move-assets-webpack-plugin -D
 const MoveAssetsPlugin = require("move-assets-webpack-plugin")
 
 new MoveAssetsPlugin({
-  outputDir: 'dist',
   patterns: [
     {
       from: 'dist/static',
@@ -70,16 +69,6 @@ new MoveAssetsPlugin({
 
 ## Options
 
-### outputDir
-
-Type: String
-
-Default: "dist"
-
-Required: false
-
-The original output directory.
-
 ### patterns
 
 Type: Array
@@ -90,6 +79,8 @@ Required: false
 
 Match Rules. Wildcard characters like `js/*.js` are not supported yet. The plugin will not work if `patterns` is an empty array.
 
+All the paths are relative to the `context` of `webpack.config.js`.
+
 ### clean
 
 Type: Boolean
@@ -99,6 +90,8 @@ Default: true
 Required: false
 
 Whether delete old files. Old files are files the `to` field given in the option `patterns` refer to.
+
+Files with same names will be overwritten.
 
 ## Attention
 

@@ -54,7 +54,6 @@ npm install move-assets-webpack-plugin -D
 const MoveAssetsPlugin = require("move-assets-webpack-plugin")
 
 new MoveAssetsPlugin({
-  outputDir: 'dist',
   patterns: [
     {
       from: 'dist/static',
@@ -70,16 +69,6 @@ new MoveAssetsPlugin({
 
 ## 参数
 
-### outputDir
-
-Type: String
-
-Default: "dist"
-
-Required: false
-
-原始输出目录。
-
 ### patterns
 
 Type: Array
@@ -90,6 +79,8 @@ Required: false
 
 匹配规则，暂不支持通配符，如 `js/*.js`。空数组时无效。
 
+`patterns` 中的所有路径都是相对于 `webpack.config.js` 配置项 `context` 的相对路径。
+
 ### clean
 
 Type: Boolean
@@ -99,6 +90,8 @@ Default: true
 Required: false
 
 是否删除旧文件。旧文件指 `patterns` 中 `to` 字段指向的文件。
+
+同名文件会被覆盖。
 
 ## 注意事项
 
