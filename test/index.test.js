@@ -30,6 +30,9 @@ const feViewPath = resolvePath('fe/public/index.html');
 const feIcoPath = resolvePath('fe/public/favicon.ico');
 const feLibPath = resolvePath('fe/public/js/libs/jq.js');
 const feDistPath = resolvePath('fe/dist');
+const feNestedCwdPath = resolvePath('fe/cwd');
+const feNestedDistPath = resolvePath('fe/cwd/dist');
+const feOuterDistPath = resolvePath('dist');
 // back-end
 const beCssPath = resolvePath('be/public/css/app.css');
 const beJsPath1 = resolvePath('be/public/js/app-old.js');
@@ -49,11 +52,6 @@ const beViewPath2 = resolvePath('be/view/log.html');
  *         + jq.js
  * + be/
  *   + public/
- *     + css/
- *       + app.css
- *     + js/
- *       + ...
- *     + libs/
  *       + ...
  *   + view/
  *     + index.html
@@ -166,6 +164,7 @@ function createNewFiles() {
 
 const cwd = process.cwd();
 beforeEach(() => {
+  // note that the working directory is `/`
   process.chdir(sandbox.dir);
   sandbox.cleanSync();
   createOldFiles();
@@ -186,9 +185,9 @@ const baseOptions = {
       './src/index.js',
     ],
   },
-  context: feRootPath,
+  context: feRootPath, // /fe
   output: {
-    path: feDistPath,
+    path: feDistPath, // fe/dist
     filename: 'js/[name].js',
     publicPath: '/',
     chunkFilename: 'js/[name].js',
@@ -212,9 +211,149 @@ const basePlugins = [
       },
     ],
   }),
-]
+];
 
-test('outputDir is not set', async () => {
+// context
+
+test('1. output context is nested in webpack context', async () => {
+  // /fe/cwd
+  sandbox.createDirSync(feNestedCwdPath);
+  process.chdir(feNestedCwdPath);
+
+  const options = {
+    ...baseOptions,
+    output: undefined, // /fe/cwd/dist
+    plugins: [
+      new HtmlWebpackPlugin({
+        template: feViewPath,
+      }),
+      new CopyPlugin({
+        patterns: [
+          {
+            from: fePublicPath,
+            to: feNestedDistPath,
+            globOptions: {
+              ignore: [
+                'index.html',
+              ],
+            },
+          },
+        ],
+      }),
+      new MoveAssetsPlugin({
+        patterns: [
+          {
+            from: 'cwd/dist/index.html',
+            to: '../be/view/index.html',
+          },
+          {
+            from: 'cwd/dist',
+            to: '../be/public',
+          },
+        ],
+      }),
+    ],
+  };
+  const stats = await webpack(options).run();
+
+  expect(Object.keys(stats.compilation.assets).map(normalizePath).sort())
+    .toEqual([
+      '../../../be/view/index.html',
+      '../../../be/public/1.js',
+      '../../../be/public/app.js',
+      '../../../be/public/js/libs/jq.js',
+      '../../../be/public/favicon.ico',
+    ].map(normalizePath).sort());
+
+  const fileList = await sandbox.getFileList();
+  expect(fileList.map(normalizePath).sort())
+    .toEqual([
+      // be old
+      'be/view/log.html',
+      // be
+      'be/view/index.html',
+      'be/public/1.js',
+      'be/public/app.js',
+      'be/public/js/libs/jq.js',
+      'be/public/favicon.ico',
+      // fe
+      'fe/src/1.js',
+      'fe/src/index.js',
+      'fe/public/index.html',
+      'fe/public/js/libs/jq.js',
+      'fe/public/favicon.ico',
+    ].map(normalizePath).sort());
+});
+
+test('2. output context is out of webpack context', async () => {
+  const options = {
+    ...baseOptions,
+    output: undefined, // /dist
+    plugins: [
+      new HtmlWebpackPlugin({
+        template: feViewPath,
+      }),
+      new CopyPlugin({
+        patterns: [
+          {
+            from: fePublicPath,
+            to: feOuterDistPath,
+            globOptions: {
+              ignore: [
+                'index.html',
+              ],
+            },
+          },
+        ],
+      }),
+      new MoveAssetsPlugin({
+        patterns: [
+          {
+            from: '../dist/index.html',
+            to: '../be/view/index.html',
+          },
+          {
+            from: '../dist',
+            to: '../be/public',
+          },
+        ],
+      }),
+    ],
+  };
+  const stats = await webpack(options).run();
+
+  expect(Object.keys(stats.compilation.assets).map(normalizePath).sort())
+    .toEqual([
+      '../be/view/index.html',
+      '../be/public/1.js',
+      '../be/public/app.js',
+      '../be/public/js/libs/jq.js',
+      '../be/public/favicon.ico',
+    ].map(normalizePath).sort());
+
+  const fileList = await sandbox.getFileList();
+  expect(fileList.map(normalizePath).sort())
+    .toEqual([
+      // be old
+      'be/view/log.html',
+      // be
+      'be/view/index.html',
+      'be/public/1.js',
+      'be/public/app.js',
+      'be/public/js/libs/jq.js',
+      'be/public/favicon.ico',
+      // fe
+      'fe/src/1.js',
+      'fe/src/index.js',
+      'fe/public/index.html',
+      'fe/public/js/libs/jq.js',
+      'fe/public/favicon.ico',
+    ].map(normalizePath).sort());
+});
+
+// options
+
+test('3. bad patterns orders', async () => {
   const options = {
     ...baseOptions,
     plugins: [
@@ -226,12 +365,12 @@ test('outputDir is not set', async () => {
             to: '../be/view/index.html',
           },
           {
-            from: 'dist/js/libs',
-            to: '../be/public/libs',
-          },
-          {
             from: 'dist/js',
             to: '../be/public/js',
+          },
+          {
+            from: 'dist/js/libs',
+            to: '../be/public/libs',
           },
         ],
       }),
@@ -241,33 +380,35 @@ test('outputDir is not set', async () => {
 
   expect(Object.keys(stats.compilation.assets).map(normalizePath).sort())
     .toEqual([
+      '../../be/view/index.html',
       '../../be/public/js/1.js',
       '../../be/public/js/app.js',
-      '../../be/view/index.html',
-      '../../be/public/libs/jq.js',
+      '../../be/public/js/libs/jq.js',
       'favicon.ico',
     ].map(normalizePath).sort());
 
   const fileList = await sandbox.getFileList();
-  expect(fileList.map(normalizePath).sort()).toEqual([
-    // be
-    'be/view/index.html',
-    'be/view/log.html',
-    'be/public/css/app.css',
-    'be/public/js/1.js',
-    'be/public/js/app.js',
-    'be/public/libs/jq.js',
-    // fe
-    'fe/src/1.js',
-    'fe/src/index.js',
-    'fe/public/index.html',
-    'fe/public/js/libs/jq.js',
-    'fe/public/favicon.ico',
-    'fe/dist/favicon.ico',
-  ].map(normalizePath).sort());
-})
+  expect(fileList.map(normalizePath).sort())
+    .toEqual([
+      // be old
+      'be/view/log.html',
+      'be/public/css/app.css',
+      // be
+      'be/view/index.html',
+      'be/public/js/1.js',
+      'be/public/js/app.js',
+      'be/public/js/libs/jq.js',
+      // fe
+      'fe/src/1.js',
+      'fe/src/index.js',
+      'fe/public/index.html',
+      'fe/public/js/libs/jq.js',
+      'fe/public/favicon.ico',
+      'fe/dist/favicon.ico',
+    ].map(normalizePath).sort());
+});
 
-test('no options', async () => {
+test('4. no options', async () => {
   const options = {
     ...baseOptions,
     plugins: [
@@ -279,43 +420,43 @@ test('no options', async () => {
 
   expect(Object.keys(stats.compilation.assets).map(normalizePath).sort())
     .toEqual([
+      'index.html',
       'js/1.js',
       'js/app.js',
-      'index.html',
       'js/libs/jq.js',
       'favicon.ico',
     ].map(normalizePath).sort());
 
   const fileList = await sandbox.getFileList();
-  expect(fileList.map(normalizePath).sort()).toEqual([
-    // be
-    'be/view/index.html',
-    'be/view/log.html',
-    'be/public/css/app.css',
-    'be/public/js/1-old.js',
-    'be/public/js/app-old.js',
-    'be/public/libs/jq-old.js',
-    // fe
-    'fe/src/1.js',
-    'fe/src/index.js',
-    'fe/public/index.html',
-    'fe/public/js/libs/jq.js',
-    'fe/public/favicon.ico',
-    "fe/dist/index.html",
-    "fe/dist/js/1.js",
-    "fe/dist/js/app.js",
-    "fe/dist/js/libs/jq.js",
-    'fe/dist/favicon.ico',
-  ].map(normalizePath).sort());
-})
+  expect(fileList.map(normalizePath).sort())
+    .toEqual([
+      // be old
+      'be/view/index.html',
+      'be/view/log.html',
+      'be/public/js/1-old.js',
+      'be/public/js/app-old.js',
+      'be/public/libs/jq-old.js',
+      'be/public/css/app.css',
+      // fe
+      'fe/src/1.js',
+      'fe/src/index.js',
+      'fe/public/index.html',
+      'fe/public/js/libs/jq.js',
+      'fe/public/favicon.ico',
+      'fe/dist/index.html',
+      'fe/dist/js/1.js',
+      'fe/dist/js/app.js',
+      'fe/dist/js/libs/jq.js',
+      'fe/dist/favicon.ico',
+    ].map(normalizePath).sort());
+});
 
-test('do not delete old files', async () => {
+test('5. keep old files', async () => {
   const options = {
     ...baseOptions,
     plugins: [
       ...basePlugins,
       new MoveAssetsPlugin({
-        outputDir: 'dist',
         clean: false,
         patterns: [
           {
@@ -338,9 +479,9 @@ test('do not delete old files', async () => {
 
   expect(Object.keys(stats.compilation.assets).map(normalizePath).sort())
     .toEqual([
+      '../../be/view/index.html',
       '../../be/public/js/1.js',
       '../../be/public/js/app.js',
-      '../../be/view/index.html',
       '../../be/public/libs/jq.js',
       'favicon.ico',
     ].map(normalizePath).sort());
@@ -348,17 +489,17 @@ test('do not delete old files', async () => {
   const fileList = await sandbox.getFileList();
   expect(fileList.map(normalizePath).sort())
     .toEqual([
-      // be
-      'be/view/index.html',
-      'be/view/log.html',
-      'be/public/css/app.css',
-      'be/public/js/1.js',
-      'be/public/js/app.js',
-      'be/public/libs/jq.js',
       // be old
+      'be/view/log.html',
       'be/public/js/1-old.js',
       'be/public/js/app-old.js',
       'be/public/libs/jq-old.js',
+      'be/public/css/app.css',
+      // be
+      'be/view/index.html',
+      'be/public/js/1.js',
+      'be/public/js/app.js',
+      'be/public/libs/jq.js',
       // fe
       'fe/src/1.js',
       'fe/src/index.js',
@@ -369,13 +510,14 @@ test('do not delete old files', async () => {
     ].map(normalizePath).sort());
 });
 
-test('use backslash', async () => {
+// others
+
+test('6. use backslash', async () => {
   const options = {
     ...baseOptions,
     plugins: [
       ...basePlugins,
       new MoveAssetsPlugin({
-        outputDir: 'dist',
         patterns: [
           {
             from: 'dist\\index.html',
@@ -397,9 +539,9 @@ test('use backslash', async () => {
 
   expect(Object.keys(stats.compilation.assets).map(normalizePath).sort())
     .toEqual([
+      '../../be/view/index.html',
       '../../be/public/js/1.js',
       '../../be/public/js/app.js',
-      '../../be/view/index.html',
       '../../be/public/libs/jq.js',
       'favicon.ico',
     ].map(normalizePath).sort());
@@ -407,10 +549,11 @@ test('use backslash', async () => {
   const fileList = await sandbox.getFileList();
   expect(fileList.map(normalizePath).sort())
     .toEqual([
-      // be
-      'be/view/index.html',
+      // be old
       'be/view/log.html',
       'be/public/css/app.css',
+      // be
+      'be/view/index.html',
       'be/public/js/1.js',
       'be/public/js/app.js',
       'be/public/libs/jq.js',
@@ -421,5 +564,81 @@ test('use backslash', async () => {
       'fe/public/js/libs/jq.js',
       'fe/public/favicon.ico',
       'fe/dist/favicon.ico',
+    ].map(normalizePath).sort());
+});
+
+test('7. dist in outer directory', async () => {
+  const options = {
+    ...baseOptions,
+    output: {
+      ...baseOptions.output,
+      path: feOuterDistPath,
+    },
+    plugins: [
+      new HtmlWebpackPlugin({
+        template: feViewPath,
+      }),
+      new CopyPlugin({
+        patterns: [
+          {
+            from: fePublicPath,
+            to: feOuterDistPath,
+            globOptions: {
+              ignore: [
+                'index.html',
+              ],
+            },
+          },
+        ],
+      }),
+      new MoveAssetsPlugin({
+        // in this case, '../be' is out of the sandbox
+        // so use './be' instead
+        patterns: [
+          {
+            from: '../dist/index.html',
+            to: '../be/view/index.html',
+          },
+          {
+            from: '../dist/js/libs',
+            to: '../be/public/libs',
+          },
+          {
+            from: '../dist/js',
+            to: '../be/public/js',
+          },
+        ],
+      }),
+    ],
+  };
+  const stats = await webpack(options).run();
+
+  expect(Object.keys(stats.compilation.assets).map(normalizePath).sort())
+    .toEqual([
+      '../be/view/index.html',
+      '../be/public/js/1.js',
+      '../be/public/js/app.js',
+      '../be/public/libs/jq.js',
+      'favicon.ico',
+    ].map(normalizePath).sort());
+
+  const fileList = await sandbox.getFileList();
+  expect(fileList.map(normalizePath).sort())
+    .toEqual([
+      // be old
+      'be/view/log.html',
+      'be/public/css/app.css',
+      // be
+      'be/view/index.html',
+      'be/public/js/1.js',
+      'be/public/js/app.js',
+      'be/public/libs/jq.js',
+      // fe
+      'fe/src/1.js',
+      'fe/src/index.js',
+      'fe/public/index.html',
+      'fe/public/js/libs/jq.js',
+      'fe/public/favicon.ico',
+      'dist/favicon.ico',
     ].map(normalizePath).sort());
 });
