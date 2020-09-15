@@ -17,7 +17,7 @@
 
 Move the output files to other directories after the build.
 
-Technically speaking, this plugin modifies the asset's path in the compiling process, so that the files are written to the target directory, rather than moved after the build.
+Technically, this plugin modifies the asset's path while compiling, so the files are directly written to the target directory, rather than moved after the build.
 
 If the output looks like this:
 
@@ -91,19 +91,19 @@ Required: false
 
 Whether delete old files. Old files are files the `to` field given in the option `patterns` refer to.
 
-Files with same names will be overwritten.
+Files with same names will be overwritten even if this option is set to `false`.
 
 ## Attention
 
-### Plugin Order
+### The Order of Plugins
 
 This plugin must be placed after plugins that may add files to `compilation.assets`, or when this plugin is called, files not added are unable to be processed.
 
-**In one word, always put this plugin at the end of `plugins` option.**
+**In one word, always put this plugin at the end of the `plugins` option.**
 
-For example, [html-webpack-plugin](https://github.com/jantimon/html-webpack-plugin) adds a html file to `compilation.assets`. If MoveAssetsPlugin is called before HtmlWebpackPlugin, the html file is not yet added to `compilation.assets`, so the rules operating html files will not work.
+For example, [html-webpack-plugin](https://github.com/jantimon/html-webpack-plugin) adds a html file to `compilation.assets`. If MoveAssetsPlugin is called before HtmlWebpackPlugin, when the html file is not yet added to `compilation.assets`, the rules operating html files will not work.
 
-### Patterns
+### The Order of Patterns
 
 Rules that are more specific should be placed ahead.
 
@@ -126,21 +126,21 @@ In this case `dist/js/libs` is more specific than `dist/js`, so it should be in 
 
 Why not write a script, or just edit `webpack.config`/`vue.config.js`?
 
-The shorthand of writing a script is that the script is out of the webpack build process, making the webpack environment variables inaccessible.
+The shortcoming of writing a script is that the script is out of the webpack build process, making the webpack environment variables inaccessible.
 
-When using `webpack.config.js`, it does work by editing the config file. However, the config will become complicated if there are too many paths to edit. The plugin offers an interface so that you don't have to change the original config.
+When using `webpack.config.js`, it does work by editing the config file. However, the config will become complicated if there are too many paths. The plugin offers an interface so that you don't have to change the original config.
 
-For cli users, such as `@vue/cli`, it does not offer many relative options. Basically you can only move the entire `dist`, and it’s hard to move files in it.
+For cli users, such as `@vue/cli`, it does not offer many relative options. Basically you can only move the entire `dist`, and it's hard to move files in it.
 
-## Developing
+## Development
 
-### Why Changing While Compiling
-
-Why modifying the asset's path during compiling progress, rather than moving till the whole build process is done?
+### Why Changing the Compiling Process?
 
 It seems an easy and efficient way to move the outputs using modules like `fs` in a `hook` after all files are written to the disk.
 
-Here's the problem, `@vue/cli` and `create-react-app` will calculate the gzipped sizes of files after the build, and this process is after the webpack build process and will use the `assets` data returned by webpack. An error will be thrown if files are moved to other directories.
+So why modifying the asset's path during compiling process instead of moving after the build process?
+
+Here's the problem, `@vue/cli` and `create-react-app` will calculate the gzipped sizes of files after the build, and this is after the webpack build process and will use the `assets` data returned by webpack. An error will be thrown if files are moved to other directories.
 
 ### The Differences Between @vue/cli And create-react-app
 
