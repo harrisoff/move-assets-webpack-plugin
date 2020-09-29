@@ -1,0 +1,36 @@
+{
+  "definitions": {
+    "ObjectPattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "string",
+          "minLength": 1
+        },
+        "to": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["from", "to"]
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "patterns": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/ObjectPattern"
+          }
+        ]
+      }
+    },
+    "clean": {
+      "type": "boolean"
+    }
+  }
+}

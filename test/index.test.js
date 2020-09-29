@@ -213,7 +213,7 @@ const basePlugins = [
   }),
 ];
 
-// context
+// context test cases
 
 test('1. output context is nested in webpack context', async () => {
   // /fe/cwd
@@ -351,7 +351,7 @@ test('2. output context is out of webpack context', async () => {
     ].map(normalizePath).sort());
 });
 
-// options
+// options test cases
 
 test('3. bad patterns orders', async () => {
   const options = {
@@ -451,7 +451,24 @@ test('4. no options', async () => {
     ].map(normalizePath).sort());
 });
 
-test('5. keep old files', async () => {
+test('5. invalid options', () => {
+  const errMsg = 'Invalid options object. Move Assets Plugin has been initialized using an options object that does not match the API schema.\n'
+    + " - options.patterns[0] misses the property 'to'. Should be:\n"
+    + '   non-empty string';
+
+  function genOptions() {
+    return new MoveAssetsPlugin({
+      patterns: [
+        {
+          from: 'dist/index.html',
+        },
+      ],
+    });
+  }
+  expect(genOptions).toThrow(errMsg);
+});
+
+test('6. keep old files', async () => {
   const options = {
     ...baseOptions,
     plugins: [
@@ -510,9 +527,9 @@ test('5. keep old files', async () => {
     ].map(normalizePath).sort());
 });
 
-// others
+// other test cases
 
-test('6. use backslash', async () => {
+test('7. use backslash', async () => {
   const options = {
     ...baseOptions,
     plugins: [
@@ -567,7 +584,7 @@ test('6. use backslash', async () => {
     ].map(normalizePath).sort());
 });
 
-test('7. dist in outer directory', async () => {
+test('8. dist in outer directory', async () => {
   const options = {
     ...baseOptions,
     output: {

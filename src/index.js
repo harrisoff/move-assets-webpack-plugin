@@ -1,5 +1,10 @@
 const path = require('path');
 const fs = require('fs-extra');
+const validateOptions = require('schema-utils');
+
+// basically a copy of
+// https://github.com/webpack-contrib/copy-webpack-plugin/blob/master/src/options.json
+const schema = require('./options.json');
 
 function normalizePath(p) {
   return path.normalize(p);
@@ -11,7 +16,11 @@ function escapeBackSlash(p) {
 
 class MoveAssetsPlugin {
   constructor(options = {}) {
-    // TODO: validation
+    validateOptions(schema, options, {
+      name: 'Move Assets Plugin',
+      baseDataPath: 'options',
+    });
+
     const { patterns, clean } = options;
     this.patterns = patterns || [];
     this.clean = clean === undefined ? true : clean;
