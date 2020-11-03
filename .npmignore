@@ -3,3 +3,6 @@ test
 .eslintignore
 .eslintrc.js
 jest.config.js
+.idea
+.vscode
+coverage
