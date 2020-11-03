@@ -13,7 +13,7 @@
 - [Documentation](https://github.com/harrisoff/move-assets-webpack-plugin/blob/master/README.md)
 - [文档](https://github.com/harrisoff/move-assets-webpack-plugin/blob/master/README.zh-CN.md)
 
-## Feature
+## Features
 
 Move the output files to other directories after the build.
 
@@ -44,6 +44,8 @@ Now you may need this plugin.
 
 **⚠️ If you are using create-react-app, please make sure to check the differences between @vue/cli and create-react-app mentioned at the end.**
 
+**⭐ If this plugin helped, please [star the repo](https://github.com/harrisoff/move-assets-webpack-plugin), Thanks!**
+
 ## Getting Started
 
 ```bash
@@ -54,9 +56,12 @@ npm install move-assets-webpack-plugin -D
 const MoveAssetsPlugin = require("move-assets-webpack-plugin")
 
 new MoveAssetsPlugin({
+  clean: true,
   patterns: [
     {
       from: 'dist/static',
+      // files in `to` will be deleted
+      // unless `clean` is set to `false`
       to: '../be/public/static'
     },
     {
@@ -73,7 +78,7 @@ new MoveAssetsPlugin({
 
 Type: Array
 
-Default: []
+Default: `[]`
 
 Required: false
 
@@ -85,23 +90,23 @@ All the paths are relative to the `context` of `webpack.config.js`.
 
 Type: Boolean
 
-Default: true
+Default: `true`
 
 Required: false
 
 Whether delete old files. Old files are files the `to` field given in the option `patterns` refer to.
 
-Files with same names will be overwritten even if this option is set to `false`.
+`false` could not guarantee that the old files would always be kept. If new files have same names as the old files, old files will be overwritten.
 
 ## Attention
 
 ### The Order of Plugins
 
+**In short, always put this plugin at the end of the `plugins` option.**
+
 This plugin must be placed after plugins that may add files to `compilation.assets`, or when this plugin is called, files not added are unable to be processed.
 
-**In one word, always put this plugin at the end of the `plugins` option.**
-
-For example, [html-webpack-plugin](https://github.com/jantimon/html-webpack-plugin) adds a html file to `compilation.assets`. If MoveAssetsPlugin is called before HtmlWebpackPlugin, when the html file is not yet added to `compilation.assets`, the rules operating html files will not work.
+For example, [html-webpack-plugin](https://github.com/jantimon/html-webpack-plugin) adds a html file to `compilation.assets`. If MoveAssetsPlugin is called before HtmlWebpackPlugin, the rules operating html files will not work because the html file is not added to `compilation.assets` yet.
 
 ### The Order of Patterns
 
@@ -128,7 +133,7 @@ Why not write a script, or just edit `webpack.config`/`vue.config.js`?
 
 The shortcoming of writing a script is that the script is out of the webpack build process, making the webpack environment variables inaccessible.
 
-When using `webpack.config.js`, it does work by editing the config file. However, the config will become complicated if there are too many paths. The plugin offers an interface so that you don't have to change the original config.
+When using `webpack.config.js`, it does work by editing the config file, however the config will become complicated if there are too many paths to edit. This plugin offers an interface so that you don't have to change the original config.
 
 For cli users, such as `@vue/cli`, it does not offer many relative options. Basically you can only move the entire `dist`, and it's hard to move files in it.
 
@@ -144,14 +149,14 @@ Here's the problem, `@vue/cli` and `create-react-app` will calculate the gzipped
 
 ### The Differences Between @vue/cli And create-react-app
 
-The conclusion is: **When using `create-react-app`, the plugin is unable to move files copied from `public` to `build`.**
+The conclusion is: **When using `create-react-app`, this plugin is unable to move files copied from `public` to `build`.**
 
 This is because those two take different measures to process the `public` files.
 
-`@vue/cli` uses [copy-webpack-plugin](https://github.com/webpack-contrib/copy-webpack-plugin) to handle files in `public` directory, which adds files to `compilation.assets`, and with the ability of webpack the files are written to new directories. This is not a real copy-paste process.
+`@vue/cli` uses [copy-webpack-plugin](https://github.com/webpack-contrib/copy-webpack-plugin) to handle files in `public` directory, which adds `public` files to `compilation.assets`. With the ability of webpack the files are written to new directories. This is not a real copy-paste process.
 
-In other words, all files in the `dist` will exist in `compilation.assets`, so this plugin is able to operate all of them.
+In other words, all files in the `dist` existed in `compilation.assets`, so this plugin is able to operate all of them.
 
 `create-react-app` does a real copy-paste to `public`. There is a function used to copy files in the build script, and the webpack build process is after the copy process.
 
-Now that files in `public` will not be added to `compilation.assets`, those files are unable to be processed.
+Now that `public` files will not be added to `compilation.assets`, this plugin is unable to process those files.

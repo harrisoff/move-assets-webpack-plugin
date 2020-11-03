@@ -42,7 +42,9 @@
 
 这时，可能就需要这个插件了。
 
-**如果使用 create-react-app，请务必看一下后面提到的 @vue/cli 和 create-react-app 的区别**。
+**⚠️如果使用 create-react-app，请务必看一下后面提到的 @vue/cli 和 create-react-app 的区别**。
+
+**⭐如果这个插件能帮上忙，[求个 star](https://github.com/harrisoff/move-assets-webpack-plugin)，感谢资瓷！**
 
 ## 使用
 
@@ -54,9 +56,12 @@ npm install move-assets-webpack-plugin -D
 const MoveAssetsPlugin = require("move-assets-webpack-plugin")
 
 new MoveAssetsPlugin({
+  clean: true,
   patterns: [
     {
       from: 'dist/static',
+      // `to` 指向的文件会被删除
+      // 除非设置 `clean` 为 `false`
       to: '../be/public/static'
     },
     {
@@ -73,7 +78,7 @@ new MoveAssetsPlugin({
 
 Type: Array
 
-Default: []
+Default: `[]`
 
 Required: false
 
@@ -85,21 +90,21 @@ Required: false
 
 Type: Boolean
 
-Default: true
+Default: `true`
 
 Required: false
 
 是否删除旧文件。旧文件指 `patterns` 中 `to` 字段指向的文件。
 
-就算设置为 `false`，同名的旧文件会被覆盖。
+设置为 `false` 不能保证旧文件一定能被保留，如果新旧文件同名，那么旧文件会被覆盖。
 
 ## 注意事项
 
 ### 插件顺序
 
-如果存在会向 `compilation.assets` 添加内容的插件，本插件需要放在这些插件的后面，否则将获取不到后来添加到 `compilation.assets` 的文件。
+总之，把这个插件放在所有插件的最后。
 
-总之，放在所有插件的最后就对了。
+如果存在会向 `compilation.assets` 添加内容的插件，本插件需要放在这些插件的后面，否则将获取不到后来添加到 `compilation.assets` 的文件。
 
 举个例子，[html-webpack-plugin](https://github.com/jantimon/html-webpack-plugin) 会向 `compilation.assets` 添加 HTML 模板文件，如果本插件在它之前调用，这时 html 文件还没有被添加到 `compilation.assets`，对应的规则将会失效。
 
@@ -154,4 +159,4 @@ const patterns = [
 
 而 `create-react-app` 对 `public` 的处理就是真的复制粘贴了，其构建脚本中有专门用于复制文件的函数，并且先复制 `public`，然后再启动 webpack 构建流程。
 
-也就是说，使用 `create-react-app` 时，public 中的文件是不会被添加到 `compilation.assets` 的，那么对于这部分文件，本插件就无能为力了。
+也就是说，使用 `create-react-app` 时，`public` 中的文件是不会被添加到 `compilation.assets` 的，那么对于这部分文件，本插件就无能为力了。
